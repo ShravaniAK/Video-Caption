@@ -22,3 +22,42 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+input[type="range"] {
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 5px;
+  height: 5px;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  background: white;
+  border-radius: 50%;
+  height: 12px;
+  width: 12px;
+}
+
+input[type="range"]::-moz-range-thumb {
+  background: white;
+  border-radius: 50%;
+  height: 12px;
+  width: 12px;
+  border: none;
+}
+
+.caption-enter {
+  opacity: 0;
+}
+.caption-enter-active {
+  opacity: 1;
+  transition: opacity 300ms;
+}
+.caption-exit {
+  opacity: 1;
+}
+.caption-exit-active {
+  opacity: 0;
+  transition: opacity 300ms;
+}

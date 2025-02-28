@@ -1,101 +1,215 @@
-import Image from "next/image";
+"use client"
+
+import { useState, useRef, useEffect } from 'react';
+import Head from 'next/head';
+import CaptionInput from './components/CaptionInput';
+import VideoPlayer from './components/VideoPlayer';
+import CaptionList from './components/CaptionList';
+
 
 export default function Home() {
+  const [videoUrl, setVideoUrl] = useState('');
+  const [captions, setCaptions] = useState([]);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(true);
+  
+  useEffect(() => {
+    const savedCaptions = localStorage.getItem('captions');
+    const savedUrl = localStorage.getItem('videoUrl');
+    
+    if (savedCaptions) {
+      setCaptions(JSON.parse(savedCaptions));
+    }
+    
+    if (savedUrl) {
+      setVideoUrl(savedUrl);
+      setShowUrlInput(false);
+    }
+  }, []);
+  
+  // Save captions to localStorage whenever they change
+  useEffect(() => {
+    if (captions.length > 0) {
+      localStorage.setItem('captions', JSON.stringify(captions));
+    }
+    
+    if (videoUrl) {
+      localStorage.setItem('videoUrl', videoUrl);
+    }
+  }, [captions, videoUrl]);
+  
+  const handleAddCaption = (newCaption) => {
+    setCaptions([...captions, newCaption]);
+  };
+  
+  const handleEditCaption = (index, updatedCaption) => {
+    const updatedCaptions = [...captions];
+    updatedCaptions[index] = updatedCaption;
+    setCaptions(updatedCaptions);
+  };
+  
+  const handleDeleteCaption = (index) => {
+    const updatedCaptions = captions.filter((_, i) => i !== index);
+    setCaptions(updatedCaptions);
+  };
+  
+  const handleVideoSubmit = (e) => {
+    e.preventDefault();
+    const url = e.target.videoUrl.value;
+    if (isValidVideoUrl(url)) {
+      setVideoUrl(url);
+      setShowUrlInput(false);
+    } else {
+      alert('Please enter a valid video URL');
+    }
+  };
+  
+  const isValidVideoUrl = (url) => {
+    try {
+      new URL(url);
+      return url.match(/\.(mp4|webm|ogg|mov)($|\?)/i) || 
+             url.includes('youtube.com') || 
+             url.includes('youtu.be') ||
+             url.includes('vimeo.com');
+    } catch (_) {
+      return false;
+    }
+  };
+  
+  const handleReset = () => {
+    if (confirm('Are you sure you want to reset? This will clear all captions.')) {
+      setCaptions([]);
+      setVideoUrl('');
+      setShowUrlInput(true);
+      localStorage.removeItem('captions');
+      localStorage.removeItem('videoUrl');
+    }
+  };
+  
+  const exportCaptions = () => {
+    // Create VTT format
+    let vttContent = 'WEBVTT\n\n';
+    
+    captions.forEach((caption, index) => {
+      const startTime = formatVttTime(caption.startTime);
+      const endTime = formatVttTime(caption.endTime);
+      
+      vttContent += `${index + 1}\n`;
+      vttContent += `${startTime} --> ${endTime}\n`;
+      vttContent += `${caption.text}\n\n`;
+    });
+    
+    // Create download link
+    const blob = new Blob([vttContent], { type: 'text/vtt' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'captions.vtt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+  
+  const formatVttTime = (seconds) => {
+    const date = new Date(seconds * 1000);
+    const hours = date.getUTCHours().toString().padStart(2, '0');
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+    const secs = date.getUTCSeconds().toString().padStart(2, '0');
+    const ms = date.getUTCMilliseconds().toString().padStart(3, '0');
+    
+    return `${hours}:${minutes}:${secs}.${ms}`;
+  };
+  
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="min-h-screen bg-gray-100">
+      <Head>
+        <title>Video Captioning App</title>
+        <meta name="description" content="Add captions to your videos" />
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
+      
+      <header className="bg-indigo-600 text-white p-4 shadow-md">
+        <div className="container mx-auto flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Video Captioning App</h1>
+          <div className="space-x-2">
+            {!showUrlInput && (
+              <>
+                <button
+                  onClick={exportCaptions}
+                  className="px-3 py-1 bg-indigo-500 hover:bg-indigo-400 rounded"
+                >
+                  Export Captions
+                </button>
+                <button
+                  onClick={handleReset}
+                  className="px-3 py-1 bg-red-500 hover:bg-red-400 rounded"
+                >
+                  Reset
+                </button>
+              </>
+            )}
+          </div>
         </div>
+      </header>
+      
+      <main className="container mx-auto p-4 text-black">
+        {showUrlInput ? (
+          <div className="max-w-xl mx-auto bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-semibold mb-4">Enter Video URL</h2>
+            <form onSubmit={handleVideoSubmit}>
+              <div className="mb-4">
+                <label htmlFor="videoUrl" className="block text-gray-700 mb-2">
+                  Video URL (MP4, WebM, YouTube, Vimeo):
+                </label>
+                <input
+                  type="text"
+                  id="videoUrl"
+                  name="videoUrl"
+                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  placeholder="https://example.com/video.mp4"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-500 transition"
+              >
+                Load Video
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <VideoPlayer
+                url={videoUrl}
+                captions={captions}
+                onTimeUpdate={setCurrentTime}
+                isPlaying={isPlaying}
+                setIsPlaying={setIsPlaying}
+              />
+            </div>
+            <div className="lg:col-span-1 space-y-6">
+              <CaptionInput
+                onAddCaption={handleAddCaption}
+                currentTime={currentTime}
+                isPlaying={isPlaying}
+                setIsPlaying={setIsPlaying}
+              />
+              <CaptionList
+                captions={captions}
+                onEditCaption={handleEditCaption}
+                onDeleteCaption={handleDeleteCaption}
+                currentTime={currentTime}
+              />
+            </div>
+          </div>
+        )}
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      
+  
     </div>
   );
 }
